@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lms-app-ingress
+  namespace: teamtwo-namespace
+spec:
+  ingressClassName: nginx  # Replace the annotation with this field
+  rules:
+  - host: lms-app.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: lms-app
+            port:
+              number: 5000
+  tls:
+  - hosts:
+    - lms-app.example.com
+    secretName: tls-secret
