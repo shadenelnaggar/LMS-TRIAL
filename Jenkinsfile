@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "shadenelnaggar/devops-project-trial-2"
         DOCKER_CREDENTIALS = "579edcb8-3533-4a89-afea-ee7c9312ab80"
-        AWS_CREDENTIALS = "c382d1de-a305-423a-b22f-daece7e0a0be"
+        AWS_CREDENTIALS = "5f8c3958-0e77-4b2f-8ca3-64b3892ad002"
         TERRAFORM_DIR = "${terraform}"
         AWS_DIR = "${aws}"
         KUBECTL_DIR = "${kubectl}"
