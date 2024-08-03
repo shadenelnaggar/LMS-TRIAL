@@ -5,9 +5,9 @@ pipeline {
         DOCKER_IMAGE = "shadenelnaggar/devops-project-trial"
         DOCKER_CREDENTIALS = '579edcb8-3533-4a89-afea-ee7c9312ab80'
         AWS_CREDENTIALS = 'c382d1de-a305-423a-b22f-daece7e0a0be'
-        TERRAFORM_DIR = "${terraform}"
-        AWS_DIR = "${aws}"
-        KUBECTL_DIR = "${kubectl}"
+        TERRAFORM_DIR = "C:\\Users\\Hp\\Downloads\\terraform_1.9.3_windows_amd64\\terraform.exe"
+        AWS_DIR = "C:\\Users\\Hp\\AppData\\Roaming\\Python\\Python312\\Scripts\\aws.cmd"
+        KUBECTL_DIR = "C:\\Users\\Hp\\kubectl.exe"
         TERRAFORM_CONFIG_PATH = "${env.WORKSPACE}\\terraform"
         KUBECONFIG_PATH = "${env.WORKSPACE}\\kubeconfig"
     }
@@ -57,7 +57,6 @@ pipeline {
             }
         }
 
-
         stage('Terraform Plan') {
             steps { 
                 script {
@@ -89,13 +88,12 @@ pipeline {
              }
          }
          
-
          stage('Update Kubeconfig') {
            steps {
                 script {
                      withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
                         bat """
-                            aws eks --region %AWS_DEFAULT_REGION% update-kubeconfig --name TeamTwoCluster-${env.BUILD_NUMBER} --kubeconfig ${KUBECONFIG_PATH}
+                            ${AWS_DIR} eks --region %AWS_DEFAULT_REGION% update-kubeconfig --name TeamTwoCluster-${env.BUILD_NUMBER} --kubeconfig ${KUBECONFIG_PATH}
                          """
                     }
                 }
@@ -107,51 +105,43 @@ pipeline {
                  script {
                      withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
                          bat """
-                         kubectl --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pv.yaml
-                         kubectl --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pvc.yaml
-                         kubectl --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\deployment.yaml
-                         kubectl --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\service.yaml
+                         ${KUBECTL_DIR} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pv.yaml
+                         ${KUBECTL_DIR} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pvc.yaml
+                         ${KUBECTL_DIR} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\deployment.yaml
+                         ${KUBECTL_DIR} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\service.yaml
                          """
                     }
                  }
              }
          }
 
-      
          stage('Deploy Ingress') {
             steps {
-                sh 'kubectl apply -f ingress.yaml'
+                bat '${KUBECTL_DIR} apply -f ${env.WORKSPACE}\\ingress.yaml'
             }
         }
-
-     }
-
-
+    }
 
     post {
         always {
             // Clean up workspace after build
             cleanWs()
-             steps { 
-                script {
-                    echo "Pipeline failed. Destroying the infrastructure..."
-                    dir("${env.TERRAFORM_CONFIG_PATH}") {
-                        bat """${env.TERRAFORM_DIR} destroy -auto-approve"""
-                    }
-                }       
+            script {
+                echo "Pipeline failed. Destroying the infrastructure..."
+                dir("${env.TERRAFORM_CONFIG_PATH}") {
+                    bat """${env.TERRAFORM_DIR} destroy -auto-approve"""
+                }
             }
         }
         success {
             echo 'Pipeline completed successfully.'
         }
         failure {
-             steps { 
-                script {
-                    echo "Pipeline failed. Destroying the infrastructure..."
-                    dir("${env.TERRAFORM_CONFIG_PATH}") {
-                        bat """${env.TERRAFORM_DIR} destroy -auto-approve"""
-                    }
-                }       
+            script {
+                echo "Pipeline failed. Destroying the infrastructure..."
+                dir("${env.TERRAFORM_CONFIG_PATH}") {
+                    bat """${env.TERRAFORM_DIR} destroy -auto-approve"""
+                }
             }
         }
     }
