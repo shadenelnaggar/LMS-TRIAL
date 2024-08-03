@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "shadenelnaggar/devops-project"
+        DOCKER_IMAGE = "shadenelnaggar/devops-project-trial"
         DOCKER_CREDENTIALS = '579edcb8-3533-4a89-afea-ee7c9312ab80'
         AWS_CREDENTIALS = 'c382d1de-a305-423a-b22f-daece7e0a0be'
         TERRAFORM_DIR = "${terraform}"
