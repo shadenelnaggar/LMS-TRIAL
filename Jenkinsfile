@@ -1,16 +1,13 @@
 pipeline {
     agent any
 
-    tools {
-        terraform 'terraform'
-        aws 'aws-cli'
-        kubectl 'kubectl'
-    }
-
     environment {
         DOCKER_IMAGE = "shadenelnaggar/devops-project"
         DOCKER_CREDENTIALS = '579edcb8-3533-4a89-afea-ee7c9312ab80'
         AWS_CREDENTIALS = 'c382d1de-a305-423a-b22f-daece7e0a0be'
+        TERRAFORM_DIR = tool name: 'terraform', type: 'terraform'
+        AWS_DIR = tool name: 'aws-cli', type: 'aws'
+        KUBECTL_DIR = tool name: 'kubectl', type: 'kubectl'
         TERRAFORM_CONFIG_PATH = "${env.WORKSPACE}\\terraform"
         KUBECONFIG_PATH = "${env.WORKSPACE}\\kubeconfig"
     }
@@ -54,7 +51,7 @@ pipeline {
                 script {
                     // Initialize Terraform
                     dir("${env.TERRAFORM_CONFIG_PATH}") {
-                        bat """${tool 'terraform'} init"""
+                        bat """${env.TERRAFORM_DIR} init"""
                     }
                 }
             }
@@ -65,7 +62,7 @@ pipeline {
                 script {
                     // Generate and show the Terraform execution plan
                     dir("${env.TERRAFORM_CONFIG_PATH}") {
-                        bat """${tool 'terraform'} plan"""
+                        bat """${env.TERRAFORM_DIR} plan"""
                     }
                 }
             }
@@ -76,7 +73,7 @@ pipeline {
                 script {
                     // Apply the Terraform plan to deploy the infrastructure
                     dir("${env.TERRAFORM_CONFIG_PATH}") {
-                        bat """${tool 'terraform'} apply -auto-approve"""
+                        bat """${env.TERRAFORM_DIR} apply -auto-approve"""
                     }
                 }
             }
@@ -86,7 +83,7 @@ pipeline {
             steps {
                 script {
                     echo "KUBECONFIG path is set to: ${env.KUBECONFIG_PATH}"
-                    bat "${tool 'kubectl'} config view --kubeconfig ${KUBECONFIG_PATH}"
+                    bat "${env.KUBECTL_DIR} config view --kubeconfig ${KUBECONFIG_PATH}"
                 }
             }
         }
@@ -96,7 +93,7 @@ pipeline {
                 script {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
                         bat """
-                            ${tool 'aws-cli'} eks --region %AWS_DEFAULT_REGION% update-kubeconfig --name TeamTwoCluster-${env.BUILD_NUMBER} --kubeconfig ${KUBECONFIG_PATH}
+                            ${env.AWS_DIR} eks --region %AWS_DEFAULT_REGION% update-kubeconfig --name TeamTwoCluster-${env.BUILD_NUMBER} --kubeconfig ${KUBECONFIG_PATH}
                         """
                     }
                 }
@@ -108,10 +105,10 @@ pipeline {
                 script {
                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
                         bat """
-                        ${tool 'kubectl'} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pv.yaml
-                        ${tool 'kubectl'} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pvc.yaml
-                        ${tool 'kubectl'} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\deployment.yaml
-                        ${tool 'kubectl'} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\service.yaml
+                        ${env.KUBECTL_DIR} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pv.yaml
+                        ${env.KUBECTL_DIR} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pvc.yaml
+                        ${env.KUBECTL_DIR} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\deployment.yaml
+                        ${env.KUBECTL_DIR} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\service.yaml
                         """
                     }
                 }
@@ -133,7 +130,7 @@ pipeline {
             script {
                 echo "Pipeline failed. Destroying the infrastructure..."
                 dir("${env.TERRAFORM_CONFIG_PATH}") {
-                    sh "${tool 'terraform'} destroy -auto-approve"
+                    sh "${env.TERRAFORM_DIR} destroy -auto-approve"
                 }
             }
         }
