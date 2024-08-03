@@ -3,11 +3,11 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "shadenelnaggar/devops-project-trial-2"
-        DOCKER_CREDENTIALS = '579edcb8-3533-4a89-afea-ee7c9312ab80'
-        AWS_CREDENTIALS = 'c382d1de-a305-423a-b22f-daece7e0a0be'
-        TERRAFORM_DIR = "C:\\Users\\Hp\\Downloads\\terraform_1.9.3_windows_amd64\\terraform.exe"
-        AWS_DIR = "C:\\Users\\Hp\\AppData\\Roaming\\Python\\Python312\\Scripts\\aws.cmd"
-        KUBECTL_DIR = "C:\\Users\\Hp\\kubectl.exe"
+        DOCKER_CREDENTIALS = "579edcb8-3533-4a89-afea-ee7c9312ab80"
+        AWS_CREDENTIALS = "c382d1de-a305-423a-b22f-daece7e0a0be"
+        TERRAFORM_DIR = "${terraform}"
+        AWS_DIR = "${aws}"
+        KUBECTL_DIR = "${kubectl}"
         TERRAFORM_CONFIG_PATH = "${env.WORKSPACE}\\terraform"
         KUBECONFIG_PATH = "${env.WORKSPACE}\\kubeconfig"
     }
