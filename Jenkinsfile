@@ -1,11 +1,14 @@
 pipeline {
     agent any
 
+    tools {
+        terraform 'terraform'
+        aws 'aws-cli'
+        kubectl 'kubectl'
+    }
+
     environment {
         DOCKER_IMAGE = "shadenelnaggar/devops-project"
-        TERRAFORM_DIR = "${terraform}"
-        AWS_DIR = "${aws}"
-        KUBECTL_DIR = "${kubectl}"
         DOCKER_CREDENTIALS = '579edcb8-3533-4a89-afea-ee7c9312ab80'
         AWS_CREDENTIALS = 'c382d1de-a305-423a-b22f-daece7e0a0be'
         TERRAFORM_CONFIG_PATH = "${env.WORKSPACE}\\terraform"
@@ -51,19 +54,18 @@ pipeline {
                 script {
                     // Initialize Terraform
                     dir("${env.TERRAFORM_CONFIG_PATH}") {
-                        bat """${env.TERRAFORM_DIR} init"""
+                        bat """${tool 'terraform'} init"""
                     }
                 }
             }
         }
 
-
         stage('Terraform Plan') {
-            steps { 
+            steps {
                 script {
                     // Generate and show the Terraform execution plan
                     dir("${env.TERRAFORM_CONFIG_PATH}") {
-                        bat """${env.TERRAFORM_DIR} plan"""
+                        bat """${tool 'terraform'} plan"""
                     }
                 }
             }
@@ -74,59 +76,54 @@ pipeline {
                 script {
                     // Apply the Terraform plan to deploy the infrastructure
                     dir("${env.TERRAFORM_CONFIG_PATH}") {
-                        bat """${env.TERRAFORM_DIR} apply -auto-approve"""
+                        bat """${tool 'terraform'} apply -auto-approve"""
                     }
                 }
             }
         }
 
         stage('Verify Kubeconfig Path') {
-             steps {
-                 script {
-                     echo "KUBECONFIG path is set to: ${env.KUBECONFIG_PATH}"
-                     bat "kubectl config view --kubeconfig ${KUBECONFIG_PATH}"
-                 }
-             }
-         }
-         
-
-         stage('Update Kubeconfig') {
-           steps {
+            steps {
                 script {
-                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
+                    echo "KUBECONFIG path is set to: ${env.KUBECONFIG_PATH}"
+                    bat "${tool 'kubectl'} config view --kubeconfig ${KUBECONFIG_PATH}"
+                }
+            }
+        }
+
+        stage('Update Kubeconfig') {
+            steps {
+                script {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
                         bat """
-                            aws eks --region %AWS_DEFAULT_REGION% update-kubeconfig --name TeamTwoCluster-${env.BUILD_NUMBER} --kubeconfig ${KUBECONFIG_PATH}
-                         """
+                            ${tool 'aws-cli'} eks --region %AWS_DEFAULT_REGION% update-kubeconfig --name TeamTwoCluster-${env.BUILD_NUMBER} --kubeconfig ${KUBECONFIG_PATH}
+                        """
                     }
                 }
             }
-         }
+        }
 
-         stage('Deploy Kubernetes Resources') {
-             steps {
-                 script {
-                     withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
-                         bat """
-                         kubectl --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pv.yaml
-                         kubectl --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pvc.yaml
-                         kubectl --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\deployment.yaml
-                         kubectl --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\service.yaml
-                         """
+        stage('Deploy Kubernetes Resources') {
+            steps {
+                script {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "${AWS_CREDENTIALS}"]]) {
+                        bat """
+                        ${tool 'kubectl'} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pv.yaml
+                        ${tool 'kubectl'} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\pvc.yaml
+                        ${tool 'kubectl'} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\deployment.yaml
+                        ${tool 'kubectl'} --kubeconfig ${KUBECONFIG_PATH} apply -f ${env.WORKSPACE}\\service.yaml
+                        """
                     }
-                 }
-             }
-         }
+                }
+            }
+        }
 
-      
-         stage('Deploy Ingress') {
+        stage('Deploy Ingress') {
             steps {
                 sh 'kubectl apply -f ingress.yaml'
             }
         }
-
-     }
-
-
+    }
 
     post {
         always {
@@ -136,7 +133,7 @@ pipeline {
             script {
                 echo "Pipeline failed. Destroying the infrastructure..."
                 dir("${env.TERRAFORM_CONFIG_PATH}") {
-                    sh "${env.TERRAFORM_DIR} destroy -auto-approve"
+                    sh "${tool 'terraform'} destroy -auto-approve"
                 }
             }
         }
